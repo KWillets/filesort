@@ -29,7 +29,6 @@ typedef struct fp{
   void fopen() {
     if(!file)
       file = ::fopen(name, "r");
-    //      printf("%s open\n", name);
   }
 
   void fread(unsigned char * buf, size_t len) {

@@ -3,12 +3,15 @@
 #include <string.h>
 #include <inttypes.h>
 
+#include <vector>
+using namespace std;
+
 #include "filesort.h"
 
-void filesort(fptr **files, int lo, int hi, size_t d );
+void filesort(vector<fptr *> &files, int lo, int hi, size_t d );
 
 template <bool ascending>
-void lcpsort( fptr **files, int lo, int hi ) {
+void lcpsort( vector<fptr *> &files, int lo, int hi ) {
   if ( hi <= lo ) return;
   int lt = lo, gt = hi;
 
@@ -24,7 +27,7 @@ void lcpsort( fptr **files, int lo, int hi ) {
   lcpsort<ascending>( files, gt+1, hi );
 };
 
-void filesort(fptr **files, int lo, int hi, size_t d )
+void filesort(vector<fptr *> &files, int lo, int hi, size_t d )
 {
   if ( hi <= lo ) return;
   int lt = lo, gt = hi;
@@ -44,24 +47,26 @@ void filesort(fptr **files, int lo, int hi, size_t d )
 
   lcpsort<true> ( files, lo, lt-1 );
   lcpsort<false>( files, gt+1, hi );  
+
 };
 
 
 int main(int argc, char **argv) {
 
-  fptr *files[1000];
-  int n = 0;
+  vector<fptr *> files;
+
   char buf[1024];
   char *pbuf = buf;
   size_t blen = 1024;
   ssize_t slen=0;
 
-  while( (slen = getline(&pbuf, &blen, stdin)) > 0)
-    files[n++] = new fptr(buf, slen-1);
+  while( (slen = getline(&pbuf, &blen, stdin)) > 0) {
+    files.push_back( new fptr(buf, slen-1));
+  }
 
-  filesort(files, 0, n-1, 0);
+  filesort(files, 0, files.size()-1, 0);
 
-  for(int i=0; i<n; i++)
+  for(int i=0; i<files.size(); i++)
     printf("%s\n", files[i]->name);
 }
 
