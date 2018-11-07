@@ -3,6 +3,9 @@
 #include <string.h>
 #include <inttypes.h>
 #include <sys/stat.h>
+#include <sys/mman.h>
+#include <fcntl.h>
+#include <unistd.h>
 
 #include <algorithm>
 
@@ -12,7 +15,8 @@ typedef struct fp{
   char *name;
   off_t lcp;
   off_t length;
-  FILE *file;
+  int fd;
+  unsigned char *map;
   // cache?
 
   static size_t fsize( char *fname ) {
@@ -21,40 +25,33 @@ typedef struct fp{
     return s.st_size;
   }
 
-  fp(char *_name, ssize_t slen): lcp(0), file(0) {
+  fp(char *_name, ssize_t slen): lcp(0), map(0), fd(0) {
     name = strndup(_name, slen);
     length = fsize(name);
   }
 
   void fopen() {
-    if(!file)
-      file = ::fopen(name, "r");
-  }
-
-  void fread(unsigned char * buf, size_t len) {
-    ::fread((void *) buf, 1, len, file);
+    if(!fd)
+      fd = open(name, O_RDONLY);
+    map = (unsigned char *) mmap(0, length, PROT_READ, MAP_FILE | MAP_SHARED, fd, 0);
+    if(map == MAP_FAILED)
+      fprintf(stderr, "map failed %s %d\n", name, fd);
   }
 
   void fclose() {
-    ::fclose(file);
-    file = 0;
+    munmap(map, length);
+    close(fd);
+    fd = 0;
   }
 
-  void fseek(size_t off) {
-    ::fseek(file, off, SEEK_SET);
-  }
-    
 } fptr;
 
-#define BUFSIZE 512
-
 #define min(X,Y) (X) < (Y) ? (X) : (Y);
-#define cmpsgn(X,Y) X < Y ? 1 : X > Y ? -1 : 0
 
-size_t strlcp(unsigned char *s, unsigned char *t, size_t l ) {
-  off_t lcp;
+off_t strlcp(unsigned char *s, unsigned char *t, size_t l, off_t lcp ) {
 
-  for(lcp = 0; lcp < l-7 && *(uint64_t *)(s + lcp) == *(uint64_t *)(t + lcp); lcp += 8)
+  lcp &= ~7; 
+  for(; lcp < (l & ~7) && *(uint64_t *)(s + lcp) == *(uint64_t *)(t + lcp); lcp += 8)
     ;
 
   for(; lcp < l && s[lcp] == t[lcp]; lcp++)
@@ -63,34 +60,20 @@ size_t strlcp(unsigned char *s, unsigned char *t, size_t l ) {
   return lcp;
 }
 
-// fseek to initial lcp and compare blockwise
-// files already open
-int fcmp( fptr *pivot, fptr *f, size_t lcp ) {
-  unsigned char buf1[BUFSIZE], buf2[BUFSIZE];
+int fcmp( fptr *pivot, fptr *f, off_t lcp ) {
 
-  int cmp = cmpsgn(pivot->length, f->length);
+  int cmp;
+
   off_t len = min(pivot->length, f->length);
+  
+  lcp = strlcp(pivot->map, f->map, len, lcp );
+  f->lcp = lcp;
 
-  pivot->fseek(lcp);
-  f->fseek(lcp);
+  if( lcp < len ) 
+    cmp = f->map[lcp] - pivot->map[lcp];
+  else
+    cmp = f->length - pivot->length;
 
-  off_t d = 0;
-  while( lcp < len ) {
-    off_t rlen = min(BUFSIZE, len-lcp);
-
-    pivot->fread(buf1, rlen);
-    f->fread(buf2, rlen);
-
-    d = strlcp( buf1, buf2, rlen );
-    lcp += d;
-
-    if( d < rlen ) {
-      cmp = buf2[d] - buf1[d];
-      break;
-    }
-  }
-
-  f->lcp = lcp ;
   return cmp;
 }
 

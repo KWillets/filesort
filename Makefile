@@ -1,3 +1,4 @@
+all: filesort filecmp
 
 filecmp: filecmp.cpp filesort.h
 	g++ -o filecmp filecmp.cpp

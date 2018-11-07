@@ -24,7 +24,7 @@ void lcpsort( vector<fptr *> &files, int lo, int hi ) {
   off_t lo_max=0, hi_max=0;
   
   for( int i = lo + 1; i <= gt; ) {
-    if      ( ascending ? files[i]->lcp > pivot : files[i]->lcp < pivot ) {
+    if ( ascending ? files[i]->lcp > pivot : files[i]->lcp < pivot ) {
       hi_max = hi_max < files[i]->lcp ? files[i]->lcp : hi_max;
       std::swap( files[i], files[gt--]);
     } else if ( ascending ? files[i]->lcp < pivot : files[i]->lcp > pivot ) {
@@ -35,19 +35,15 @@ void lcpsort( vector<fptr *> &files, int lo, int hi ) {
   }
 
   filesort( files, lt, gt, pivot);
-
   lcpsort<ascending>( files, lo, lt-1 );
   lcpsort<ascending>( files, gt+1, hi );
 
   if( ascending ) {
-    if( gt < hi ) 
+    if( gt < hi )
       files[gt+1]->lcp = pivot;
-
-    // carry lower
     if( lo < lt )
-      files[lt]->lcp = lo_max;  // first lcp of middle is max of lower 
+      files[lt]->lcp = lo_max;
   } else { 
-    // undo subsort lcp changes
     if( gt < hi )
       files[gt+1]->lcp = hi_max;
 
@@ -64,7 +60,6 @@ void filesort(vector<fptr *> &files, int lo, int hi, size_t d )
   fptr *pivot = files[lo];
   pivot->fopen();
 
-  pivot->lcp = pivot->length;
   off_t lo_max=0, hi_max=0;
   for( int i = lo + 1; i <= gt; )
     {
@@ -77,15 +72,18 @@ void filesort(vector<fptr *> &files, int lo, int hi, size_t d )
       } else if (cmpr > 0) {
 	hi_max = hi_max < files[i]->lcp ? files[i]->lcp : hi_max;
 	std::swap(files[i],    files[gt--]);
-      } else            i++;
+      } else {
+	pivot->lcp = pivot->length;
+	i++;
+      }
     }
 
   files[lt]->lcp = lo_max;
 
   lcpsort<true> ( files, lo, lt-1 );
-    
+
   if( gt < hi ) {
-    lcpsort<false>( files, gt+1, hi );  // gt+1 gets rewritten with later lcp''s
+    lcpsort<false>( files, gt+1, hi );
     files[gt+1]->lcp = hi_max;
   }
 };
@@ -105,9 +103,12 @@ int main(int argc, char **argv) {
   }
 
   filesort(files, 0, files.size()-1, 0);
+  files[0]->lcp = 0;
 
-  for(int i=0; i<files.size(); i++)
-    printf("% 6lld %s\n", files[i]->lcp, files[i]->name);
+  for(int i=0; i<files.size(); i++) {
+    char dup = i && files[i]->lcp == files[i]->length ? 'D' : ' ';
+    printf("%c% 6lld %s\n", dup,  files[i]->lcp, files[i]->name);
+  }
 }
 
   
