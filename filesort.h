@@ -46,8 +46,6 @@ typedef struct fp{
 
 } fptr;
 
-#define min(X,Y) (X) < (Y) ? (X) : (Y);
-
 off_t strlcp(unsigned char *s, unsigned char *t, size_t l, off_t lcp ) {
 
   lcp &= ~7; 
@@ -64,7 +62,7 @@ int fcmp( fptr *pivot, fptr *f, off_t lcp ) {
 
   int cmp;
 
-  off_t len = min(pivot->length, f->length);
+  off_t len = std::min(pivot->length, f->length);
   
   lcp = strlcp(pivot->map, f->map, len, lcp );
   f->lcp = lcp;
