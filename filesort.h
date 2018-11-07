@@ -46,7 +46,7 @@ typedef struct fp{
     
 } fptr;
 
-#define BUFSIZE 1024
+#define BUFSIZE 512
 
 #define min(X,Y) (X) < (Y) ? (X) : (Y);
 #define cmpsgn(X,Y) X < Y ? 1 : X > Y ? -1 : 0
