@@ -78,6 +78,8 @@ void filesort(vector<fptr *> &files, int lo, int hi, size_t d )
       }
     }
 
+  pivot->fclose();
+  
   files[lt]->lcp = lo_max;
 
   lcpsort<true> ( files, lo, lt-1 );
@@ -98,17 +100,24 @@ int main(int argc, char **argv) {
   size_t blen = 1024;
   ssize_t slen=0;
 
-  while( (slen = getline(&pbuf, &blen, stdin)) > 0) {
-    files.push_back( new fptr(buf, slen-1));
-  }
+  for( string line; std::getline(std::cin, line);)
+    files.push_back( new fptr(line));
 
   filesort(files, 0, files.size()-1, 0);
   files[0]->lcp = 0;
 
-  for(int i=0; i<files.size(); i++) {
-    char dup = i && files[i]->lcp == files[i]->length ? 'D' : ' ';
-    printf("%c% 6lld %s\n", dup,  files[i]->lcp, files[i]->name);
+  int ndup=0, i=0;
+
+  for(i=0; i<files.size()-1; i++) {
+    if(ndup == 0 && files[i+1]->lcp == files[i+1]->length)
+      ndup=1;
+    printf("% 3.0d % 6lld %s\n", ndup,  files[i]->lcp, files[i]->name.c_str());
+    if(files[i+1]->lcp == files[i+1]->length)
+      ndup++;
+    else
+      ndup = 0;
   }
+  printf("% 3.0d % 6lld %s\n", ndup,  files[i]->lcp, files[i]->name.c_str());
 }
 
   

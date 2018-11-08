@@ -7,35 +7,43 @@
 #include <fcntl.h>
 #include <unistd.h>
 
+#include <string>
+#include <iostream>
 #include <algorithm>
 
 #ifndef FILESORT
 
 typedef struct fp{
-  char *name;
+  std::string name;
   off_t lcp;
   off_t length;
   int fd;
   unsigned char *map;
-  // cache?
 
-  static size_t fsize( char *fname ) {
+  static size_t fsize( std::string fname ) {
     struct stat s;
-    stat(fname, &s);
-    return s.st_size;
-  }
+    if(stat(fname.c_str(), &s) == 0)
+      return s.st_size;
+    else {
+      perror("stat failed");
+      return 0;
+    }
+  };
 
-  fp(char *_name, ssize_t slen): lcp(0), map(0), fd(0) {
-    name = strndup(_name, slen);
+  fp(std::string _name): lcp(0), map(0), fd(0) {
+    name = _name;
     length = fsize(name);
   }
 
   void fopen() {
     if(!fd)
-      fd = open(name, O_RDONLY);
+      fd = open(name.c_str(), O_RDONLY);
+    if(fd < 0)
+      perror("open failed");
+    
     map = (unsigned char *) mmap(0, length, PROT_READ, MAP_FILE | MAP_SHARED, fd, 0);
     if(map == MAP_FAILED)
-      fprintf(stderr, "map failed %s %d\n", name, fd);
+      perror("map failed");
   }
 
   void fclose() {
@@ -60,14 +68,14 @@ off_t strlcp(unsigned char *s, unsigned char *t, size_t l, off_t lcp ) {
 
 int fcmp( fptr *pivot, fptr *f, off_t lcp ) {
 
-  int cmp;
-
   off_t len = std::min(pivot->length, f->length);
-  
-  lcp = strlcp(pivot->map, f->map, len, lcp );
+
+  lcp = strlcp(pivot->map, f->map, len, lcp);
   f->lcp = lcp;
 
-  if( lcp < len ) 
+  int cmp;
+
+  if( lcp < len )
     cmp = f->map[lcp] - pivot->map[lcp];
   else
     cmp = f->length - pivot->length;
